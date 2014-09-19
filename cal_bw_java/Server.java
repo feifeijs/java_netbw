@@ -2,57 +2,50 @@ package cal_bw_java;
 
 import java.io.*;
 import java.net.*;
+import java.util.Random;
 
 public class Server {
 
 	private byte[] buf;
-	private String file;
+	private final int bufSize = 1000000; //1MB
+	private int numSend = 0;
 	private int port;
 	private int readCnt;
-	public Server(String file, int port){
-		this.file = file;
+
+	public Server(int port, int bufSendNum){
 		this.port = port;
-	}
-	
-	public int read2mem() throws Exception{
-		File f = new File(this.file);
-		int fileSize = (int)f.length();
-		this.buf = new byte[fileSize];
-		FileInputStream  fis = new FileInputStream(f);
-		int readCnt = fis.read(buf);
-		fis.close();	
-		if (readCnt != fileSize){
-			throw new IOException("readCnt != fileSize");
-		}else{
-			System.out.println("Bytes num " + readCnt+ " read into memory");
-		}		
-		this.readCnt = readCnt;
-		return readCnt;
+		this.buf = new byte[bufSize];
+		this.numSend = bufSendNum;
+		int i;
+		Random r = new Random();
+		r.nextBytes(buf);
 	}
 	
 	public void serverProcess()throws Exception{
+		int i = 0;
 		ServerSocket serverSocket = new ServerSocket(this.port);
 		while(true){
 			System.out.println("Waiting on port: " + this.port);
 			Socket connSocket = serverSocket.accept();
 			System.out.println("Client connected");
 			OutputStream outs = connSocket.getOutputStream();
-			outs.write(this.buf, 0, this.readCnt);
+			for (i=0; i<numSend; i++){
+				outs.write(buf, 0, bufSize);
+			}
 			outs.flush();
 			outs.close();
-			System.out.println("File transferred");
+			System.out.println("buf transferred");
 		}
 	}
 	
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2){
-			System.out.println("Usage: java cal_bw_java.Server <transfer_file> <listen_port>");
+			System.out.println("Usage: java cal_bw_java.Server <listen_port> <bufSendNum>");
 			System.exit(1);
 		}
-		String f = new String(args[0]);
-		int listenPort = Integer.parseInt(args[1]);
-		Server server = new Server(f, listenPort);
-		server.read2mem();
+		int listenPort = Integer.parseInt(args[0]);
+		int bufSendNum = Integer.parseInt(args[1]);
+		Server server = new Server(listenPort, bufSendNum);
 		server.serverProcess();
 	}
 }
